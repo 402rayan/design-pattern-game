@@ -1,0 +1,10 @@
+{
+    "python.terminal.launchArgs": ["-i"],
+    "python.linting.pylintArgs": [
+        "--reports",
+        "12",
+        "--disable",
+        "I0011"
+    ],
+    "python.formatting.provider": "autopep8",
+}
