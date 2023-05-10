@@ -1,6 +1,7 @@
 import random
 from map import Map
 from tool import Tool
+from ressource import Ressource
 
 class Unit:
     def __init__(self, game, x, y, speed, food_cost):
@@ -20,13 +21,36 @@ class Unit:
     def work(self):
         raise NotImplementedError("Les unités doivent implémenter la méthode work().")
 
+
     def can_work(self):
-        return False  # Implémentez cette méthode dans les sous-classes
+        entity = self.game.map.grid[self.y][self.x]
+        return isinstance(entity, Ressource) and entity.type == self.resource_type
+
 
     def move_to_closest_resource(self):
-        pass  # Implémentez cette méthode pour déplacer l'unité vers la ressource la plus proche
+        min_distance = float('inf')
+        closest_resource_position = None
 
-    def food_cost(self):
+        for y, row in enumerate(self.game.map.grid):
+            for x, cell in enumerate(row):
+                if isinstance(cell, Ressource) and cell.type == self.resource_type:
+                    distance = abs(x - self.x) + abs(y - self.y)
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_resource_position = (x, y)
+
+        if closest_resource_position:
+            dx, dy = closest_resource_position
+            if dx > self.x:
+                self.move(1, 0)
+            elif dx < self.x:
+                self.move(-1, 0)
+            elif dy > self.y:
+                self.move(0, 1)
+            elif dy < self.y:
+                self.move(0, -1)
+
+    def get_food_cost(self):
         return self.food_cost
 
     def starve(self):
@@ -36,8 +60,8 @@ class Unit:
         return self.starvation_turns >= 5
 
 class Worker(Unit):
-    def __init__(self, game, x, y, resource_type, tool_level=1):
-        super().__init__(game, x, y)
+    def __init__(self, game, x, y, resource_type, speed, food_cost, tool_level=1):
+        super().__init__(game, x, y, speed, food_cost)
         self.resource_type = resource_type
         self.tool = Tool(tool_level)
         self.experience = 0
@@ -53,13 +77,13 @@ class Worker(Unit):
                 self.game.map.grid[self.y][self.x] = None
 
 class Lumberjack(Worker):
-    def __init__(self, game, x, y):
-        super().__init__(game, x, y, "wood")
+    def __init__(self, game, x, y, speed=1, food_cost=1):
+        super().__init__(game, x, y, "wood", speed, food_cost)
 
 class Miner(Worker):
-    def __init__(self, game, x, y):
-        super().__init__(game, x, y, random.choice(["gold", "stone"]))
+    def __init__(self, game, x, y, speed=1, food_cost=1):
+        super().__init__(game, x, y, random.choice(["gold", "stone"]), speed, food_cost)
 
 class Peasant(Worker):
-    def __init__(self, game, x, y):
-        super().__init__(game, x, y, "food")
+    def __init__(self, game, x, y, speed=1, food_cost=1):
+        super().__init__(game, x, y, "food", speed, food_cost)

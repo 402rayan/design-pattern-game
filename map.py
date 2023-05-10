@@ -35,12 +35,17 @@ class Map:
         self.grid[new_y][new_x] = entity
         entity.x, entity.y = new_x, new_y
 
+    def remove_entity(self, entity):
+        x, y = entity.x, entity.y
+        self.grid[y][x] = None
+    
+    
     def is_inside(self, x, y):
         return 0 <= x < self.width and 0 <= y < self.height
     
     def all_resources_collected(self):
         for row in self.grid:
             for cell in row:
-                if cell and cell.resource and cell.resource.amount > 0:
+                if isinstance(cell, Ressource) and cell.amount > 0:
                     return False
         return True

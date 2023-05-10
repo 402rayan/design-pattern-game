@@ -35,8 +35,9 @@ class Game:
     def feed_units(self):
         units_to_remove = []
         for unit in self.units:
-            if self.resources["food"] >= unit.food_cost():
-                self.resources["food"] -= unit.food_cost()
+            if self.resources["food"] >= unit.get_food_cost():
+                self.resources["food"] -= unit.get_food_cost()
+                print(f"l'unité {unit} a mangé {unit.get_food_cost()} nourriture")
             else:
                 unit.starve()
                 if unit.should_be_removed():
