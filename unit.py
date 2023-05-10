@@ -3,11 +3,14 @@ from map import Map
 from tool import Tool
 
 class Unit:
-    def __init__(self, game, x, y):
+    def __init__(self, game, x, y, speed, food_cost):
         self.game = game
         self.x = x
         self.y = y
-        self.tool = None
+        self.speed = speed
+        self.food_cost = food_cost
+        self.tool = Tool()
+        self.starvation_turns = 0
 
     def move(self, dx, dy):
         new_x, new_y = self.x + dx, self.y + dy
@@ -16,6 +19,21 @@ class Unit:
 
     def work(self):
         raise NotImplementedError("Les unités doivent implémenter la méthode work().")
+
+    def can_work(self):
+        return False  # Implémentez cette méthode dans les sous-classes
+
+    def move_to_closest_resource(self):
+        pass  # Implémentez cette méthode pour déplacer l'unité vers la ressource la plus proche
+
+    def food_cost(self):
+        return self.food_cost
+
+    def starve(self):
+        self.starvation_turns += 1
+
+    def should_be_removed(self):
+        return self.starvation_turns >= 5
 
 class Worker(Unit):
     def __init__(self, game, x, y, resource_type, tool_level=1):

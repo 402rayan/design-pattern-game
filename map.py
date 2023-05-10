@@ -1,10 +1,23 @@
 import random
+from ressource import Ressource
 
 class Map:
     def __init__(self, width=10, height=10):
         self.width = width
         self.height = height
         self.grid = [[None for _ in range(width)] for _ in range(height)]
+        self.generate_resources()
+
+    def generate_resources(self):
+        resource_types = ["wood", "gold", "stone", "food"]
+        num_resources = random.randint(10, 20)
+
+        for _ in range(num_resources):
+            x, y = self.get_random_empty_position()
+            resource_type = random.choice(resource_types)
+            resource_amount = random.randint(5, 20)
+            resource = Ressource(resource_type, resource_amount)
+            self.place_entity(resource, x, y)
 
     def get_random_empty_position(self):
         while True:

@@ -3,7 +3,7 @@ from unit import Lumberjack, Miner, Peasant
 from building import ProductionBuilding, ToolCreationBuilding
 
 def main():
-    starting_resources = {"wood": 50, "gold": 50, "stone": 50, "food": 50}
+    starting_resources = {"wood": 100, "gold": 100, "stone": 100, "food": 100}
     game = Game(10, 10, starting_resources)
 
     while not game.is_game_over():

@@ -78,7 +78,7 @@ class Game:
             self.map.remove_entity(unit)
 
     def is_game_over(self):
-        print("all starving: " + str(all(unit.starvation_turns >= 5 for unit in self.units)))
-        print("all resources collected: " + str(self.map.all_resources_collected()))
-        print("barre de nourriture : " + str(self.resources["food"]))
-        return (all(unit.starvation_turns >= 5 for unit in self.units) or self.map.all_resources_collected()) and self.turn > 1
+        #print("all starving: " + str(all(unit.starvation_turns >= 5 for unit in self.units)))
+        #print("all resources collected: " + str(self.map.all_resources_collected()))
+        #print("barre de nourriture : " + str(self.resources["food"]))
+        return (all(unit.starvation_turns >= 5 for unit in self.units) or self.map.all_resources_collected()) and self.turn > 5
