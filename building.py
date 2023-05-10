@@ -1,3 +1,5 @@
+from ui import UI
+
 class Building:
     def __init__(self, game, cost):
         self.game = game
@@ -21,15 +23,19 @@ class Building:
         raise NotImplementedError("Les bâtiments doivent implémenter la méthode build_effect().")
 
 class ProductionBuilding(Building):
-    def __init__(self, game, cost, unit_class):
+    def __init__(self, game, cost, unit_class, production_interval=4):
         super().__init__(game, cost)
         self.unit_class = unit_class
+        self.production_interval = production_interval
+        self.turns_since_last_production = 0
+
 
     def build_effect(self):
         x, y = self.game.map.get_random_empty_position()
         unit = self.unit_class(self.game, x, y)
         self.game.map.place_entity(unit, x, y)
         self.game.units.append(unit)
+        UI.print_invocation_message(self.unit_class.__name__)
 
 class ToolCreationBuilding(Building):
     def __init__(self, game, cost, worker_class):

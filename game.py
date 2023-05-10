@@ -49,8 +49,15 @@ class Game:
 
     def spawn_units_from_buildings(self):
         for building in self.buildings:
-            if isinstance(building, ProductionBuilding) and building.can_build():
-                building.build()
+            if isinstance(building, ProductionBuilding):
+                building.turns_since_last_production += 1
+                if building.turns_since_last_production >= building.production_interval and building.can_build():
+                    unit_cost = self.get_unit_cost(building.unit_class)
+                    if all(self.resources[res] >= cost for res, cost in unit_cost.items()):
+                        for res, cost in unit_cost.items():
+                            self.resources[res] -= cost
+                        building.build()
+                        building.turns_since_last_production = 0
 
     def update_building_production(self):
         for building in self.buildings:
@@ -72,11 +79,18 @@ class Game:
         if unit.can_be_created():
             self.map.place_entity(unit, x, y)
             self.units.append(unit)
+            print(f"J'invoque un {unit_class.__name__} !")
 
     def destroy_unit(self, unit):
         if unit in self.units:
             self.units.remove(unit)
             self.map.remove_entity(unit)
+            print(f"l'unité {unit} est morte de faim")
+
+    def get_unit_cost(self, unit_class):
+    # Ajoutez ici les coûts des différentes unités.
+    # Cet exemple suppose que toutes les unités ont le même coût.
+        return {"wood": 10, "stone": 10, "gold": 10, "food": 10}
 
     def is_game_over(self):
         #print("all starving: " + str(all(unit.starvation_turns >= 5 for unit in self.units)))

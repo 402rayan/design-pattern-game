@@ -23,3 +23,7 @@ class UI:
         print("Resources:")
         for resource_type, amount in game.resources.items():
             print(f"{resource_type.capitalize()}: {amount}")
+
+    @staticmethod
+    def print_invocation_message(unit_name):
+        print(f"J'invoque un {unit_name} !")
