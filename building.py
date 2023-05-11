@@ -29,13 +29,13 @@ class ProductionBuilding(Building):
         self.production_interval = production_interval
         self.turns_since_last_production = 0
 
-
     def build_effect(self):
         x, y = self.game.map.get_random_empty_position()
         unit = self.unit_class(self.game, x, y)
         self.game.map.place_entity(unit, x, y)
         self.game.units.append(unit)
-        UI.print_invocation_message(self.unit_class.__name__)
+        UI.print_invocation_message(unit)
+
 
 class ToolCreationBuilding(Building):
     def __init__(self, game, cost, worker_class):

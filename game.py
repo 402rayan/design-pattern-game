@@ -13,19 +13,19 @@ class Game:
         self.turn = 1
 
     def play_turn(self):
-        print("Tour " + str(self.turn) + ":" + "\n")
+        UI.clear()
         self.spawn_units_from_buildings()
         self.move_and_work_units()
         self.feed_units()
         self.update_building_production()
 
-        UI.clear()
         UI.print_map(self)
         UI.print_resources(self)
 
         self.turn += 1
 
     def move_and_work_units(self):
+        print("\nDEPLACEMENT DES UNITES:")
         for unit in self.units:
             if unit.can_work():
                 unit.work()
@@ -33,6 +33,7 @@ class Game:
                 unit.move_to_closest_resource()
 
     def feed_units(self):
+        print("\CONSOMMATION DES UNITES:")
         units_to_remove = []
         for unit in self.units:
             if self.resources["food"] >= unit.get_food_cost():
