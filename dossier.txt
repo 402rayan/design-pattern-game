@@ -1,0 +1,424 @@
+from ui import UI
+
+class Building:
+    def __init__(self, game, cost):
+        self.game = game
+        self.cost = cost
+
+    def build(self):
+        if self.can_build():
+            for resource_type, amount in self.cost.items():
+                self.game.resources[resource_type] -= amount
+            self.build_effect()
+            return True
+        return False
+
+    def can_build(self):
+        for resource_type, amount in self.cost.items():
+            if self.game.resources[resource_type] < amount:
+                return False
+        return True
+
+    def build_effect(self):
+        raise NotImplementedError("Les bâtiments doivent implémenter la méthode build_effect().")
+
+class ProductionBuilding(Building):
+    def __init__(self, game, cost, unit_class, production_interval=4):
+        super().__init__(game, cost)
+        self.unit_class = unit_class
+        self.production_interval = production_interval
+        self.turns_since_last_production = 0
+
+    def build_effect(self):
+        x, y = self.game.map.get_random_empty_position()
+        unit = self.unit_class(self.game, x, y)
+        self.game.map.place_entity(unit, x, y)
+        self.game.units.append(unit)
+        UI.print_invocation_message(unit)
+
+
+class ToolCreationBuilding(Building):
+    def __init__(self, game, cost, worker_class):
+        super().__init__(game, cost)
+        self.worker_class = worker_class
+
+    def build_effect(self):
+        for unit in self.game.units:
+            if isinstance(unit, self.worker_class):
+                unit.tool.upgrade()
+
+
+from map import Map
+from unit import Worker, Lumberjack, Miner, Peasant
+from building import ProductionBuilding, ToolCreationBuilding
+from ui import UI
+from ressource import Ressource
+
+class Game:
+    def __init__(self, width, height, starting_resources):
+        self.map = Map(width, height)
+        self.units = []
+        self.buildings = []
+        self.resources = starting_resources
+        self.turn = 1
+
+    def play_turn(self):
+        UI.clear()
+        self.spawn_units_from_buildings()
+        self.move_and_work_units()
+        self.feed_units()
+        self.update_building_production()
+
+        UI.print_map(self)
+        UI.print_resources(self)
+
+        self.turn += 1
+
+    def move_and_work_units(self):
+        print("\nDEPLACEMENT DES UNITES:")
+        for unit in self.units:
+            if unit.can_work():
+                print(f"l'unité {unit} travaille")
+                unit.work()
+            else:
+                unit.move_to_closest_resource()
+
+    def feed_units(self):
+        print("\CONSOMMATION DES UNITES:")
+        units_to_remove = []
+        for unit in self.units:
+            if self.resources["food"] >= unit.get_food_cost():
+                self.resources["food"] -= unit.get_food_cost()
+                print(f"l'unité {unit} a mangé {unit.get_food_cost()} nourriture")
+            else:
+                unit.starve()
+                if unit.should_be_removed():
+                    units_to_remove.append(unit)
+
+        for unit in units_to_remove:
+            self.units.remove(unit)
+            self.map.remove_entity(unit)
+
+    def spawn_units_from_buildings(self):
+        for building in self.buildings:
+            if isinstance(building, ProductionBuilding):
+                building.turns_since_last_production += 1
+                if building.turns_since_last_production >= building.production_interval and building.can_build():
+                    unit_cost = self.get_unit_cost(building.unit_class)
+                    if all(self.resources[res] >= cost for res, cost in unit_cost.items()):
+                        for res, cost in unit_cost.items():
+                            self.resources[res] -= cost
+                        building.build()
+                        building.turns_since_last_production = 0
+
+    def update_building_production(self):
+        for building in self.buildings:
+            if isinstance(building, ToolCreationBuilding) and building.can_build():
+                building.build()
+
+    def create_building(self, building_class):
+        building = building_class(self)
+        if building.build():
+            self.buildings.append(building)
+
+    def destroy_building(self, building):
+        if building in self.buildings:
+            self.buildings.remove(building)
+
+    def create_unit(self, unit_class):
+        x, y = self.map.get_random_empty_position()
+        unit = unit_class(self, x, y)
+        if unit.can_be_created():
+            self.map.place_entity(unit, x, y)
+            self.units.append(unit)
+            print(f"J'invoque un {unit_class.__name__} !")
+
+    def destroy_unit(self, unit):
+        if unit in self.units:
+            self.units.remove(unit)
+            self.map.remove_entity(unit)
+            print(f"l'unité {unit} est morte de faim")
+
+    def get_unit_cost(self, unit_class):
+    # Ajoutez ici les coûts des différentes unités.
+    # Cet exemple suppose que toutes les unités ont le même coût.
+        return {"wood": 10, "stone": 10, "gold": 10, "food": 10}
+
+    def is_game_over(self):
+        #print("all starving: " + str(all(unit.starvation_turns >= 5 for unit in self.units)))
+        #print("all resources collected: " + str(self.map.all_resources_collected()))
+        #print("barre de nourriture : " + str(self.resources["food"]))
+        return (all(unit.starvation_turns >= 5 for unit in self.units) or self.map.all_resources_collected()) and self.turn > 5
+
+from game import Game
+from unit import Lumberjack, Miner, Peasant
+from building import ProductionBuilding, ToolCreationBuilding
+
+def main():
+    starting_resources = {"wood": 100, "gold": 100, "stone": 100, "food": 100}
+    game = Game(10, 10, starting_resources)
+
+    while not game.is_game_over():
+        # Affichez les options de jeu
+        print("\nOptions:")
+        print("1 - Construire un bâtiment")
+        print("2 - Jouer un tour")
+        print("3 - Quitter")
+        choice = input("Choisissez une option: ")
+
+        if choice == "1":
+            print("\nBâtiments disponibles:")
+            print("1 - Bâtiment de production de bûcherons")
+            print("2 - Bâtiment de production de mineurs")
+            print("3 - Bâtiment de production de paysans")
+            print("4 - Bâtiment de création d'outils pour les bûcherons")
+            print("5 - Bâtiment de création d'outils pour les mineurs")
+            print("6 - Bâtiment de création d'outils pour les paysans")
+            building_choice = input("Choisissez un bâtiment à construire: ")
+
+            if building_choice == "1":
+                building = ProductionBuilding(game, {"wood": 10, "gold": 10, "stone": 10, "food": 10}, Lumberjack)
+            elif building_choice == "2":
+                building = ProductionBuilding(game, {"wood": 10, "gold": 10, "stone": 10, "food": 10}, Miner)
+            elif building_choice == "3":
+                building = ProductionBuilding(game, {"wood": 10, "gold": 10, "stone": 10, "food": 10}, Peasant)
+            elif building_choice == "4":
+                building = ToolCreationBuilding(game, {"wood": 10, "gold": 10, "stone": 10, "food": 10}, Lumberjack)
+            elif building_choice == "5":
+                building = ToolCreationBuilding(game, {"wood": 10, "gold": 10, "stone": 10, "food": 10}, Miner)
+            elif building_choice == "6":
+                building = ToolCreationBuilding(game, {"wood": 10, "gold": 10, "stone": 10, "food": 10}, Peasant)
+            else:
+                print("Choix non valide.")
+                continue
+
+            if building.build():
+                game.buildings.append(building)
+                print("Bâtiment construit.")
+            else:
+                print("Pas assez de ressources pour construire ce bâtiment.")
+
+        elif choice == "2":
+            game.play_turn()
+        elif choice == "3":
+            break
+        else:
+            print("Choix non valide.")
+
+    print("Fin du jeu.")
+
+if __name__ == "__main__":
+    main()
+
+import random
+from ressource import Ressource
+
+class Map:
+    def __init__(self, width=10, height=10):
+        self.width = width
+        self.height = height
+        self.grid = [[None for _ in range(width)] for _ in range(height)]
+        self.generate_resources()
+
+    def generate_resources(self):
+        resource_types = ["wood", "gold", "stone", "food"]
+        num_resources = random.randint(10, 20)
+
+        for _ in range(num_resources):
+            x, y = self.get_random_empty_position()
+            resource_type = random.choice(resource_types)
+            resource_amount = random.randint(5, 20)
+            resource = Ressource(resource_type, resource_amount)
+            self.place_entity(resource, x, y)
+
+    def get_random_empty_position(self):
+        while True:
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            if self.grid[y][x] is None:
+                return x, y
+
+    def place_entity(self, entity, x, y):
+        self.grid[y][x] = entity
+
+    def move_entity(self, entity, new_x, new_y):
+        x, y = entity.x, entity.y
+        self.grid[y][x] = None
+        self.grid[new_y][new_x] = entity
+        entity.x, entity.y = new_x, new_y
+
+    def remove_entity(self, entity):
+        x, y = entity.x, entity.y
+        self.grid[y][x] = None
+    
+    
+    def is_inside(self, x, y):
+        return 0 <= x < self.width and 0 <= y < self.height
+    
+    def all_resources_collected(self):
+        for row in self.grid:
+            for cell in row:
+                if isinstance(cell, Ressource) and cell.amount > 0:
+                    return False
+        return True
+
+# design-pattern-game
+Python game made for Design Pattern class
+
+class Ressource:
+    def __init__(self, resource_type, amount):
+        self.type = resource_type
+        self.amount = amount
+
+class Tool:
+    def __init__(self, level=1):
+        self.level = level
+
+    def upgrade(self):
+        self.level += 1
+
+
+    def __str__(self):
+        return f"{self.__class__.__name__} (niveau {self.level})"
+
+import os 
+from ressource import Ressource
+
+import random
+from map import Map
+from tool import Tool
+from ressource import Ressource
+import logging
+
+logging.basicConfig(filename='game.log', level=logging.INFO,
+                    format='%(asctime)s:%(levelname)s:%(message)s')
+
+def log_movement(func):
+    def wrapper(self, dx, dy):
+        old_x, old_y = self.x, self.y
+        func(self, dx, dy)
+        new_x, new_y = self.x, self.y
+        if (old_x, old_y) != (new_x, new_y):
+            print(
+                f"{self.__class__.__name__} moved from ({old_x}, {old_y}) to ({new_x}, {new_y})")
+    return wrapper
+
+class Unit:
+    def __init__(self, game, x, y, speed, food_cost):
+        self.game = game
+        self.x = x
+        self.y = y
+        self.speed = speed
+        self.food_cost = food_cost
+        self.tool = Tool()
+        self.starvation_turns = 0
+
+
+    @log_movement
+    def move(self, dx, dy):
+        # Coût du mouvement en nourriture
+        move_food_cost = 1
+
+        # Vérifiez si l'unité a assez de nourriture pour se déplacer
+        if self.game.resources['food'] < move_food_cost:
+            logging.warning(
+                f"{self.__class__.__name__} does not have enough food to move.")
+            return
+
+        new_x, new_y = self.x + dx, self.y + dy
+        if self.game.map.is_inside(new_x, new_y):
+            # Déduire le coût du mouvement de la nourriture totale
+            self.game.resources['food'] -= move_food_cost
+            self.game.map.move_entity(self, new_x, new_y)
+
+
+    def work(self):
+        raise NotImplementedError("Les unités doivent implémenter la méthode work().")
+
+
+    def can_work(self):
+        entity = self.game.map.grid[self.y][self.x]
+        #print s'il peut work ou non 
+        return isinstance(entity, Ressource) and entity.type == self.resource_type
+
+
+    def move_to_closest_resource(self):
+        min_distance = float('inf')
+        closest_resource_position = None
+
+        for y, row in enumerate(self.game.map.grid):
+            for x, cell in enumerate(row):
+                if isinstance(cell, Ressource) and cell.type == self.resource_type:
+                    distance = abs(x - self.x) + abs(y - self.y)
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_resource_position = (x, y)
+
+        if closest_resource_position:
+            dx, dy = closest_resource_position
+            if dx > self.x:
+                self.move(1, 0)
+            elif dx < self.x:
+                self.move(-1, 0)
+            elif dy > self.y:
+                self.move(0, 1)
+            elif dy < self.y:
+                self.move(0, -1)
+
+    def get_food_cost(self):
+        return self.food_cost
+
+    def starve(self):
+        self.starvation_turns += 1
+        print(
+            f"{self.__class__.__name__} is starving. Starvation turns: {self.starvation_turns}.")
+
+    def should_be_removed(self):
+        print(f"{self.__class__.__name__} died of starvation.")
+        return self.starvation_turns >= 5
+    
+
+class Worker(Unit):
+    def __init__(self, game, x, y, resource_type, speed, food_cost, tool_level=1):
+        super().__init__(game, x, y, speed, food_cost)
+        self.resource_type = resource_type
+        self.tool = Tool(tool_level)
+        self.experience = 0
+
+    def work(self):
+        resource = self.game.map.grid[self.y][self.x]
+        if resource and resource.type == self.resource_type:
+            amount_collected = min(self.tool.level, resource.amount)
+            resource.amount -= amount_collected
+            self.game.resources[self.resource_type] += amount_collected
+            self.experience += amount_collected
+            print(
+                f"{self.__class__.__name__} collected {amount_collected} {self.resource_type}.")
+            if resource.amount <= 0:
+                print(
+                    f"The resource at ({self.x}, {self.y}) has been depleted.")
+                self.game.map.grid[self.y][self.x] = None
+
+    def __str__(self):
+        return f"{self.__class__.__name__} (outil : {self.tool})"
+
+class Lumberjack(Worker):
+    def __init__(self, game, x, y, speed=1, food_cost=1):
+        super().__init__(game, x, y, "wood", speed, food_cost)
+
+    def __str__(self):
+        return super().__str__()
+
+class Miner(Worker):
+    def __init__(self, game, x, y, speed=1, food_cost=1):
+        super().__init__(game, x, y, random.choice(["gold", "stone"]), speed, food_cost)
+
+    def __str__(self):
+        return super().__str__()
+
+class Peasant(Worker):
+    def __init__(self, game, x, y, speed=1, food_cost=1):
+        super().__init__(game, x, y, "food", speed, food_cost)
+
+    def __str__(self):
+        return super().__str__()
