@@ -52,6 +52,8 @@ class Unit:
 
     def can_work(self):
         entity = self.game.map.grid[self.y][self.x]
+        #print s'il peut work ou non 
+        input("can work ? " + str(isinstance(entity, Ressource) and entity.type == self.resource_type))
         return isinstance(entity, Ressource) and entity.type == self.resource_type
 
 

@@ -16,7 +16,7 @@ class UI:
                 pass
         print("\n---------Tour suivant---------\n")
         '''
-        print("\n" * 100)
+        print("\n")
 
 
 

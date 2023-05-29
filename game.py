@@ -28,6 +28,7 @@ class Game:
         print("\nDEPLACEMENT DES UNITES:")
         for unit in self.units:
             if unit.can_work():
+                print(f"l'unité {unit} travaille")
                 unit.work()
             else:
                 unit.move_to_closest_resource()
